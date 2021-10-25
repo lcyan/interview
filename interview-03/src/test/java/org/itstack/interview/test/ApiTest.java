@@ -16,7 +16,7 @@ public class ApiTest {
     public void before() {
         "abc".hashCode();
         // 读取文件，103976个英语单词库.txt
-        words = FileUtil.readWordList("E:/itstack/git/github.com/interview/interview-01/103976个英语单词库.txt");
+        words = FileUtil.readWordList("D:\\code\\gitrepo\\interview\\interview-03\\103976个英语单词库.txt");
     }
 
     @Test

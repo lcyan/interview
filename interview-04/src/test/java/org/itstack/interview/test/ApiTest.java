@@ -15,7 +15,7 @@ public class ApiTest {
     @Before
     public void before() {
         // 读取文件，103976个英语单词库.txt
-        words = FileUtil.readWordList("E:/itstack/git/github.com/interview/doc/103976个英语单词库.txt");
+        words = FileUtil.readWordList("D:\\code\\gitrepo\\interview\\interview-03\\103976个英语单词库.txt/doc/103976个英语单词库.txt");
     }
 
     @Test
