@@ -7,6 +7,8 @@ import org.itstack.interview.FileUtil;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.Serializable;
+import java.lang.reflect.Type;
 import java.util.*;
 
 public class ApiTest {
@@ -100,6 +102,16 @@ public class ApiTest {
 	}
 
 	@Test
+	public void testType() {
+		Type[] tas = A.class.getGenericInterfaces();
+		Type[] tbs = B.class.getGenericInterfaces();
+
+		for (Type t : tas) {
+			System.out.println(t);
+		}
+	}
+
+	@Test
 	public void test_128hash() {
 
 		// 初始化一组字符串
@@ -131,6 +143,38 @@ public class ApiTest {
 
 	}
 
+}
+
+interface B extends Comparable<A>, Serializable {
+
+}
+
+class A extends Number implements Comparable<A>, Serializable {
+
+	@Override
+	public int compareTo(A o) {
+		return 0;
+	}
+
+	@Override
+	public int intValue() {
+		return 0;
+	}
+
+	@Override
+	public long longValue() {
+		return 0;
+	}
+
+	@Override
+	public float floatValue() {
+		return 0;
+	}
+
+	@Override
+	public double doubleValue() {
+		return 0;
+	}
 }
 
 //011000
