@@ -1,35 +1,49 @@
 package org.itstack.interview.test;
 
-import cn.hutool.core.date.DateUtil;
-import cn.hutool.core.io.FileUtil;
-import cn.hutool.http.HttpRequest;
-import cn.hutool.http.HttpResponse;
-import cn.hutool.json.JSONUtil;
-import com.alibaba.fastjson.JSON;
+import java.io.File;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Queue;
+import java.util.Stack;
+import java.util.TreeMap;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.DelayQueue;
+import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.itstack.interview.TestDelayed;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.nodes.Node;
 import org.jsoup.select.Elements;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import sun.awt.util.IdentityLinkedList;
-
-import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.time.LocalDate;
-import java.util.*;
-import java.util.concurrent.*;
+import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
+import com.alibaba.fastjson.JSON;
 
 public class ApiTest {
 
 	private Logger logger = LoggerFactory.getLogger(ApiTest.class);
 
-	public static final List<String> list = new ArrayList<>();
+	public static final List<String> DETAIL_LIST = new ArrayList<>();
+	public static final Map<String, Integer> NAME_COUNT = new HashMap<>();
 
 	@Test
 	public void test_BlockingQueue() {
@@ -154,42 +168,76 @@ public class ApiTest {
 
 	@Test
 	public void testStatistic() {
-		for (int i = 1; i <= 205; i++) {
+		DETAIL_LIST.clear();
+		NAME_COUNT.clear();
+		for (int i = 1; i <= 1; i++) {
 			System.out.printf("开始处理第%d页\n", i);
-			test_fetch(i);
+			try {
+				test_fetch(i);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
 		}
-		File file = new File(String.format("D:\\data\\tmp\\%s.txt", DateUtil.format(new Date(), "yyyy_MM_dd")));
-		FileUtil.writeLines(list, file, StandardCharsets.UTF_8);
+
+		String dateStr = DateUtil.format(new Date(), "yyyy_MM_dd");
+		File fileDetail = new File(String.format("D:\\data\\tmp\\%s_detail.txt", dateStr));
+		File fileStatistic = new File(String.format("D:\\data\\tmp\\%s_statistics.txt", dateStr));
+		FileUtil.writeLines(DETAIL_LIST, fileDetail, StandardCharsets.UTF_8);
+
+		// 将map.entrySet()转换成list
+		List<Map.Entry<String, Integer>> list = new ArrayList<>(NAME_COUNT.entrySet());
+		// 通过比较器来实现排序
+		list.sort((o1, o2) -> {
+			// 降序排序
+			return o2.getValue().compareTo(o1.getValue());
+		});
+		for (Map.Entry<String, Integer> mapping : list) {
+			FileUtil.writeString(mapping.getKey() + "\t" + mapping.getValue(), fileStatistic, StandardCharsets.UTF_8);
+		}
 	}
 
-	private void test_fetch(int i) {
-		HttpRequest request = new HttpRequest(String.format("https://v1.xianbao.net/forum" +
-				".php?mod=viewthread&tid=25356&checkrush=1&page=%d", i));
+	private void test_fetch(int i) throws IOException {
+		String tid = "25356";
+		String url = String.format("https://v1.xianbao.net/forum.php?mod=viewthread&tid=%s&checkrush=1&page=%d", tid,
+				i);
 
-		Map<String, String> headers = new HashMap<>();
-		headers.put("x-nws-log-uuid", "4656790857529850960");
-		headers.put("x-nws-uuid-verify", "c75f5a15fda7fa0d29f2fb5ce1a1e516");
-
-
-		request.addHeaders(headers);
-
+		HttpRequest request = new HttpRequest(url);
+		request.addHeaders(makeHeaders(tid));
 		HttpResponse response = request.execute();
+
 		Document document = Jsoup.parse(response.body());
-		Elements elements = document.getElementById("postlist").select(".plhin");
+
+		Elements elements = document.select("#postlist .plhin");
 		for (Element element : elements) {
 
-			Element name = element.select(".plc .pi a.xi2").get(0);
-			Element floor = element.select(".plc .pi strong>a").get(0);
-			Elements em = floor.select("em");
+			Element nameEle = element.select(".plc .pi a.xi2").first();
+			Element floorEle = element.select(".plc .pi strong>a").first();
+
+			assert nameEle != null;
+			assert floorEle != null;
+
+			Elements em = floorEle.select("em");
 
 			String value;
 			if (em.size() == 0) {
-				value = floor.html().trim();
+				value = floorEle.text().trim();
 			} else {
-				value = em.html().trim();
+				value = em.text().trim();
 			}
-			list.add(name.html() + "\t" + value);
+			DETAIL_LIST.add(nameEle.text() + "\t" + value);
+			NAME_COUNT.merge(nameEle.text(), 1, Integer::sum);
 		}
+	}
+
+	private Map<String, String> makeHeaders(String tid) {
+		Map<String, String> headers = new HashMap<>();
+		headers.put("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) " +
+				"Chrome/95.0.4638.69 Safari/537.36");
+		headers.put("x-nws-log-uuid", "4656790857529850960");
+		headers.put("x-nws-uuid-verify", "c75f5a15fda7fa0d29f2fb5ce1a1e516");
+		headers.put("referer", String.format("https://v1.xianbao.net/forum.php?mod=viewthread&tid=%s&checkrush=1",
+				tid));
+		return headers;
 	}
 
 	@Test
